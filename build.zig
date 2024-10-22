@@ -6,10 +6,12 @@ const Scanner = @import("zig-wayland").Scanner;
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) void {
+    // Need to figure out how to restrict to linux without building for musl specifically
     // Restrict to linux. I'm not aware of any wayland compositors for windows
-    const target = b.resolveTargetQuery(.{
-        .os_tag = .linux,
-    });
+    // const target = b.resolveTargetQuery(.{
+    //     .os_tag = .linux,
+    // });
+    const target = b.standardTargetOptions(.{});
 
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
@@ -26,6 +28,7 @@ pub fn build(b: *std.Build) void {
     scanner.addSystemProtocol("stable/xdg-shell/xdg-shell.xml");
     scanner.generate("wl_compositor", 1);
     scanner.generate("wl_shm", 1);
+    scanner.generate("wl_seat", 1);
     scanner.generate("xdg_wm_base", 1);
 
     const exe = b.addExecutable(.{
@@ -35,11 +38,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     exe.root_module.addImport("wayland", wayland);
-    scanner.addCSource(exe);
-
-    exe.addLibraryPath(b.path("vendor/lib64"));
+    exe.addLibraryPath(.{ .cwd_relative = "vendor/lib64" });
+    exe.addIncludePath(.{ .cwd_relative = "vendor/include" });
     exe.linkLibC();
     exe.linkSystemLibrary("wayland-client");
+    scanner.addCSource(exe);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
