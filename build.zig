@@ -43,8 +43,6 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("xkbcommon", xkbcommon);
     exe.addLibraryPath(.{ .cwd_relative = "vendor/lib64" });
     exe.addIncludePath(.{ .cwd_relative = "vendor/include" });
-    exe.addIncludePath(.{ .cwd_relative = "/usr/include/pipewire-0.3" });
-    exe.addIncludePath(.{ .cwd_relative = "/usr/include/spa-0.2" });
     exe.linkLibC();
     exe.linkSystemLibrary("wayland-client");
     exe.linkSystemLibrary("xkbcommon");
