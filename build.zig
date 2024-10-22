@@ -31,6 +31,8 @@ pub fn build(b: *std.Build) void {
     scanner.generate("wl_seat", 1);
     scanner.generate("xdg_wm_base", 1);
 
+    const xkbcommon = b.dependency("zig-xkbcommon", .{}).module("xkbcommon");
+
     const exe = b.addExecutable(.{
         .name = "app",
         .root_source_file = b.path("src/main.zig"),
@@ -38,10 +40,15 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     exe.root_module.addImport("wayland", wayland);
+    exe.root_module.addImport("xkbcommon", xkbcommon);
     exe.addLibraryPath(.{ .cwd_relative = "vendor/lib64" });
     exe.addIncludePath(.{ .cwd_relative = "vendor/include" });
+    exe.addIncludePath(.{ .cwd_relative = "/usr/include/pipewire-0.3" });
+    exe.addIncludePath(.{ .cwd_relative = "/usr/include/spa-0.2" });
     exe.linkLibC();
     exe.linkSystemLibrary("wayland-client");
+    exe.linkSystemLibrary("xkbcommon");
+    exe.linkSystemLibrary("pipewire-0.3");
     scanner.addCSource(exe);
 
     // This declares intent for the executable to be installed into the
