@@ -1,23 +1,7 @@
 const std = @import("std");
+const spa = @import("spa-0.2.zig");
 
-// /* PipeWire */
-// /* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
-// /* SPDX-License-Identifier: MIT */
-
-// #ifndef PIPEWIRE_VERSION_H
-// #define PIPEWIRE_VERSION_H
-
-// /* WARNING: Make sure to edit the real source file version.h.in! */
-
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
-
-// #include <stdbool.h>
-
-// /** Return the version of the header files. Keep in mind that this is
-// a macro and not a function, so it is impossible to get the pointer of
-// it. */
+// Return the version of the header files.
 // #define pw_get_headers_version() ("1.0.8")
 pub inline fn get_headers_version() []const u8 {
     return "1.0.8";
@@ -29,44 +13,28 @@ pub const get_library_version = pw_get_library_version;
 // /** Return TRUE if the currently linked PipeWire library version is equal
 //  * or newer than the specified version. Since 0.3.75 */
 // bool pw_check_library_version(int major, int minor, int micro);
+extern fn pw_check_library_version(major: c_int, minor: c_int, micro: c_int) bool;
+pub const check_library_version = pw_check_library_version;
 
 // /** The current API version. Versions prior to 0.2.0 have
 //  * PW_API_VERSION undefined. Please note that this is only ever
 //  * increased on incompatible API changes!  */
 // #define PW_API_VERSION "0.3"
 
-// /** The major version of PipeWire. \since 0.2.0 */
-// #define PW_MAJOR 1
-
-// /** The minor version of PipeWire. \since 0.2.0 */
-// #define PW_MINOR 0
-
-// /** The micro version of PipeWire. \since 0.2.0 */
-// #define PW_MICRO 8
+pub const MAJOR = 1;
+pub const MINOR = 0;
+pub const MICRO = 8;
 
 // /** Evaluates to TRUE if the PipeWire library version is equal or
 //  * newer than the specified. \since 0.2.0 */
-// #define PW_CHECK_VERSION(major,minor,micro)                             \
-//     ((PW_MAJOR > (major)) ||                                            \
-//      (PW_MAJOR == (major) && PW_MINOR > (minor)) ||                     \
-//      (PW_MAJOR == (major) && PW_MINOR == (minor) && PW_MICRO >= (micro)))
+pub inline fn check_version(major: i32, minor: i32, micro: i32) bool {
+    return ((MAJOR > major) or ((MAJOR == major) and (MINOR > minor))) or (((MAJOR == major) and (MINOR == minor)) and (MICRO >= micro));
+}
 
-// #ifdef __cplusplus
-// }
-// #endif
-
-// #endif /* PIPEWIRE_VERSION_H */
-
-// /* PipeWire */
-// /* SPDX-FileCopyrightText: Copyright © 2018 Wim Taymans */
-// /* SPDX-License-Identifier: MIT */
-
-// #ifndef PIPEWIRE_UTILS_H
-// #define PIPEWIRE_UTILS_H
-
-// #ifdef __cplusplus
-// extern "C" {
-// #endif
+pub const MainLoop = opaque {
+    extern fn pw_main_loop_new(p: ?*spa.Dict) ?*MainLoop;
+    pub const new = pw_main_loop_new;
+};
 
 // #include <stdlib.h>
 // #include <string.h>

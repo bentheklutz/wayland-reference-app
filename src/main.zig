@@ -25,7 +25,9 @@ pub fn main() !void {
     const registry = try display.getRegistry();
     pipewire.init(@ptrCast(&std.os.argv.len), std.os.argv.ptr);
 
-    std.log.debug("Pipewire compiled with {s}\nPipewire linked with {s}\n", .{ pipewire.get_headers_version(), pipewire.get_library_version() });
+    const mainloop = pipewire.MainLoop.new(null) orelse return;
+
+    std.log.debug("Pipewire compiled with {s}\nPipewire linked with {s}\nMainLoop is {}", .{ pipewire.get_headers_version(), pipewire.get_library_version(), mainloop });
 
     var context = Context{
         .running = true,
@@ -152,12 +154,8 @@ fn keyboardListener(keyboard: *wl.Keyboard, event: wl.Keyboard.Event, context: *
             defer state.unref();
             context.xkb_state = state.ref();
         },
-        .enter => |e| {
-            std.debug.print("Keyboard enter: {}\n", .{e.keys});
-        },
-        .leave => {
-            std.debug.print("Keyboard leave\n", .{});
-        },
+        .enter => {},
+        .leave => {},
         .key => |k| {
             const xs = context.xkb_state orelse return;
 
