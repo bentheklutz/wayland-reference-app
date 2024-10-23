@@ -16,9 +16,77 @@ const Context = struct {
     wm_base: ?*xdg.WmBase,
     seat: ?*wl.Seat,
     keyboard: ?*wl.Keyboard,
+    key_repeat_delay: ?i32,
+    key_repeat_rate: ?i32,
     pointer: ?*wl.Pointer,
     xkb_state: ?*xkb.State,
+    surface_ctx: SurfaceContext,
 };
+
+const SurfaceContext = struct {
+    surface: ?*wl.Surface,
+    buffer: ?*wl.Buffer,
+    display_data: ?[]u8,
+    xdg_surface: ?*xdg.Surface,
+    xdg_toplevel: ?*xdg.Toplevel,
+};
+
+const width = 640;
+const height = 640;
+const bytes_per_pixel = 4;
+const stride = width * bytes_per_pixel;
+
+var player = struct {
+    x: usize,
+    y: usize,
+}{
+    .x = width / 2,
+    .y = height / 2,
+};
+
+const color_background = Color(u8){
+    .red = 0x00,
+    .green = 0x48,
+    .blue = 0x64,
+    .alpha = 0xFF,
+};
+const color_player =
+    Color(u8){
+    .red = 0xDD,
+    .green = 33,
+    .blue = 0x64,
+    .alpha = 0xFF,
+};
+
+fn render(buf: []u8, bg: Color(u8), p: Color(u8)) void {
+    for (0..height) |y| {
+        for (0..width) |x| {
+            const idx = bytes_per_pixel * (y * height + x);
+            buf[idx + 0] = bg.blue;
+            buf[idx + 1] = bg.green;
+            buf[idx + 2] = bg.red;
+            buf[idx + 3] = bg.alpha;
+        }
+    }
+
+    const player_size = 30;
+
+    for (0..player_size) |y| {
+        for (0..player_size) |x| {
+            const pos_x = player.x + x - player_size / 2;
+            const pos_y = player.y + y - player_size / 2;
+            if (pos_x < 0 or pos_x > width or pos_y < 0 or pos_y > height) {
+                continue;
+            }
+
+            const idx = bytes_per_pixel * (pos_y * height + pos_x);
+            buf[idx + 0] = p.blue;
+            buf[idx + 1] = p.green;
+            buf[idx + 2] = p.red;
+            buf[idx + 3] = p.alpha;
+        }
+    }
+}
 
 pub fn main() !void {
     const display = try wl.Display.connect(null);
@@ -36,8 +104,17 @@ pub fn main() !void {
         .wm_base = null,
         .seat = null,
         .keyboard = null,
+        .key_repeat_delay = null,
+        .key_repeat_rate = null,
         .pointer = null,
         .xkb_state = null,
+        .surface_ctx = .{
+            .surface = null,
+            .buffer = null,
+            .display_data = null,
+            .xdg_surface = null,
+            .xdg_toplevel = null,
+        },
     };
 
     registry.setListener(*Context, registryListener, &context);
@@ -54,9 +131,6 @@ pub fn main() !void {
     if (display.roundtrip() != .SUCCESS) return error.RoundtripFailed;
 
     const buffer = blk: {
-        const width = 128;
-        const height = 128;
-        const stride = width * 4;
         const size = stride * height;
 
         const fd = try std.posix.memfd_create("app", 0);
@@ -69,24 +143,56 @@ pub fn main() !void {
             fd,
             0,
         );
-        @memcpy(data, @embedFile("cat.bgra"));
+        // cat.bgra no longer works because the size is different
+        // than that of the buffer
+        // @memcpy(data, @embedFile("cat.bgra"));
+        // @memset(data, 0xFF);
+        //  128 pixels tall
+        //  128 pixels wide
+        // *  4 bytes/pixel
+        // 121856 total bytes
+        context.surface_ctx.display_data = data;
+
+        render(
+            data,
+            Color(u8){
+                .red = 0x00,
+                .green = 0x48,
+                .blue = 0x64,
+                .alpha = 0xFF,
+            },
+            Color(u8){
+                .red = 0xDD,
+                .green = 33,
+                .blue = 0x64,
+                .alpha = 0xFF,
+            },
+        );
 
         const pool = try shm.createPool(fd, size);
         defer pool.destroy();
 
         break :blk try pool.createBuffer(0, width, height, stride, wl.Shm.Format.argb8888);
     };
-    defer buffer.destroy();
+    context.surface_ctx.buffer = buffer;
+
+    buffer.setListener(*SurfaceContext, bufferListener, &context.surface_ctx);
 
     const surface = try compositor.createSurface();
+    context.surface_ctx.surface = surface;
     defer surface.destroy();
     const xdg_surface = try wm_base.getXdgSurface(surface);
+    context.surface_ctx.xdg_surface = xdg_surface;
     defer xdg_surface.destroy();
     const xdg_toplevel = try xdg_surface.getToplevel();
+    context.surface_ctx.xdg_toplevel = xdg_toplevel;
     defer xdg_toplevel.destroy();
 
-    xdg_surface.setListener(*wl.Surface, xdgSurfaceListener, surface);
+    xdg_surface.setListener(*SurfaceContext, xdgSurfaceListener, &context.surface_ctx);
     xdg_toplevel.setListener(*Context, xdgToplevelListener, &context);
+
+    xdg_toplevel.setTitle("Reference Wayland Application");
+    xdg_toplevel.setAppId("Ben Test");
 
     surface.commit();
     if (display.roundtrip() != .SUCCESS) return error.RoundtripFailed;
@@ -96,6 +202,27 @@ pub fn main() !void {
 
     while (context.running) {
         if (display.dispatch() != .SUCCESS) return error.DispatchFailed;
+
+        surface.damage(0, 0, width, height);
+    }
+}
+
+fn bufferListener(buffer: *wl.Buffer, event: wl.Buffer.Event, context: *SurfaceContext) void {
+    _ = context;
+    switch (event) {
+        .release => {
+            std.log.debug("Gotta release the buffer now", .{});
+            buffer.destroy();
+        },
+    }
+}
+
+fn surfaceListener(surface: *wl.Surface, event: wl.Surface.Event, context: *SurfaceContext) void {
+    _ = surface;
+    _ = context;
+    switch (event) {
+        .enter => {},
+        .leave => {},
     }
 }
 
@@ -167,6 +294,24 @@ fn keyboardListener(keyboard: *wl.Keyboard, event: wl.Keyboard.Event, context: *
                 xkb.Keysym.Return,
                 xkb.Keysym.KP_Enter,
                 => {},
+                xkb.Keysym.W, xkb.Keysym.w => {
+                    player.y += 1;
+                },
+                xkb.Keysym.A,
+                xkb.Keysym.a,
+                => {
+                    player.x -= 1;
+                },
+                xkb.Keysym.S,
+                xkb.Keysym.s,
+                => {
+                    player.y -= 1;
+                },
+                xkb.Keysym.D,
+                xkb.Keysym.d,
+                => {
+                    player.x += 1;
+                },
                 xkb.Keysym.Escape => {},
                 xkb.Keysym.u => {},
                 xkb.Keysym.BackSpace => {},
@@ -180,6 +325,11 @@ fn keyboardListener(keyboard: *wl.Keyboard, event: wl.Keyboard.Event, context: *
             if (context.xkb_state) |xs| {
                 _ = xs.updateMask(m.mods_depressed, m.mods_latched, m.mods_locked, 0, 0, m.group);
             }
+        },
+        .repeat_info => |ri| {
+            context.*.key_repeat_delay = ri.delay;
+            context.*.key_repeat_rate = ri.rate;
+            std.debug.print("Keys will repeat after {d}ms at a rate of {d}/s", .{ ri.delay, ri.rate });
         },
     }
 }
@@ -203,6 +353,32 @@ fn pointerListener(pointer: *wl.Pointer, event: wl.Pointer.Event, context: *Cont
         .motion => |m| {
             std.debug.print("The pointer has moved: ({}, {})\n", .{ m.surface_x, m.surface_y });
         },
+        .axis_source => |as| {
+            std.debug.print("Axis source event {s}", .{@tagName(as.axis_source)});
+        },
+        .axis_discrete => |ad| {
+            std.debug.print("Axis discrete event: {s} - {d}", .{ @tagName(ad.axis), ad.discrete });
+        },
+        .axis_stop => |as| {
+            std.debug.print("Axis stop: {s}, {}", .{ @tagName(as.axis), as.time });
+        },
+        .frame => {
+            std.debug.print("Pointer frame marker", .{});
+        },
+    }
+}
+
+fn Color(comptime T: type) type {
+    switch (T) {
+        f32, f64, u32, i32, u8, i8 => {
+            return struct {
+                red: T,
+                green: T,
+                blue: T,
+                alpha: T,
+            };
+        },
+        else => @compileError("Color only supports component types of 32/64 bit float and 8/32 bit int"),
     }
 }
 
@@ -220,14 +396,22 @@ fn seatListener(seat: *wl.Seat, event: wl.Seat.Event, context: *Context) void {
                 keyboard.setListener(*Context, keyboardListener, context);
             }
         },
+        .name => |n| {
+            std.log.debug("Hi, my name is {s}", .{n.name});
+        },
     }
 }
 
-fn xdgSurfaceListener(xdg_surface: *xdg.Surface, event: xdg.Surface.Event, surface: *wl.Surface) void {
+fn xdgSurfaceListener(xdg_surface: *xdg.Surface, event: xdg.Surface.Event, context: *SurfaceContext) void {
     switch (event) {
         .configure => |configure| {
+            std.log.debug("CONGIURE", .{});
             xdg_surface.ackConfigure(configure.serial);
-            surface.commit();
+            if (context.surface) |surface| {
+                // Shouldn't get here without a display buffer I believe
+                render(context.display_data.?, color_background, color_player);
+                surface.commit();
+            }
         },
     }
 }
