@@ -2,9 +2,13 @@
     .name = "app",
     .version = "0.0.0",
     .dependencies = .{
+        // .@"zig-wayland" = .{
+        //     .url = "https://codeberg.org/ifreund/zig-wayland/archive/v0.2.0.tar.gz",
+        //     .hash = "1220687c8c47a48ba285d26a05600f8700d37fc637e223ced3aa8324f3650bf52242",
+        // },
         .@"zig-wayland" = .{
-            .url = "https://codeberg.org/ifreund/zig-wayland/archive/v0.2.0.tar.gz",
-            .hash = "1220687c8c47a48ba285d26a05600f8700d37fc637e223ced3aa8324f3650bf52242",
+            .url = "https://github.com/bentheklutz/zig-wayland/archive/2024-10-23.tar.gz",
+            .hash = "1220b23df2c9d0ebc8312c10968bf61f017c2cf44874fe3f9052896c623492c73217",
         },
         .@"zig-xkbcommon" = .{
             .url = "https://codeberg.org/ifreund/zig-xkbcommon/archive/v0.2.0.tar.gz",

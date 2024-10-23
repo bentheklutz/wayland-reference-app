@@ -21,20 +21,20 @@ pub const check_library_version = pw_check_library_version;
 //  * increased on incompatible API changes!  */
 // #define PW_API_VERSION "0.3"
 
-pub const MAJOR = 1;
-pub const MINOR = 0;
-pub const MICRO = 8;
+// pub const MAJOR = 1;
+// pub const MINOR = 0;
+// pub const MICRO = 8;
 
-// /** Evaluates to TRUE if the PipeWire library version is equal or
-//  * newer than the specified. \since 0.2.0 */
-pub inline fn check_version(major: i32, minor: i32, micro: i32) bool {
-    return ((MAJOR > major) or ((MAJOR == major) and (MINOR > minor))) or (((MAJOR == major) and (MINOR == minor)) and (MICRO >= micro));
-}
+// // /** Evaluates to TRUE if the PipeWire library version is equal or
+// //  * newer than the specified. \since 0.2.0 */
+// pub inline fn check_version(major: i32, minor: i32, micro: i32) bool {
+//     return ((MAJOR > major) or ((MAJOR == major) and (MINOR > minor))) or (((MAJOR == major) and (MINOR == minor)) and (MICRO >= micro));
+// }
 
-pub const MainLoop = opaque {
-    extern fn pw_main_loop_new(p: ?*spa.Dict) ?*MainLoop;
-    pub const new = pw_main_loop_new;
-};
+// pub const MainLoop = opaque {
+//     extern fn pw_main_loop_new(p: ?*spa.Dict) ?*MainLoop;
+//     pub const new = pw_main_loop_new;
+// };
 
 // #include <stdlib.h>
 // #include <string.h>

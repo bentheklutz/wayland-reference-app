@@ -7,7 +7,7 @@ const wl = wayland.client.wl;
 const xdg = wayland.client.xdg;
 const xkb = @import("xkbcommon");
 
-const pipewire = @import("pipewire-0.3_2.zig");
+// const pipewire = @import("pipewire-0.3_2.zig");
 
 const Context = struct {
     running: bool,
@@ -23,11 +23,11 @@ const Context = struct {
 pub fn main() !void {
     const display = try wl.Display.connect(null);
     const registry = try display.getRegistry();
-    pipewire.init(@ptrCast(&std.os.argv.len), std.os.argv.ptr);
+    // pipewire.init(@ptrCast(&std.os.argv.len), std.os.argv.ptr);
 
-    const mainloop = pipewire.MainLoop.new(null) orelse return;
+    // const mainloop = pipewire.MainLoop.new(null) orelse return;
 
-    std.log.debug("Pipewire compiled with {s}\nPipewire linked with {s}\nMainLoop is {}", .{ pipewire.get_headers_version(), pipewire.get_library_version(), mainloop });
+    // std.log.debug("Pipewire compiled with {s}\nPipewire linked with {s}\nMainLoop is {}", .{ pipewire.get_headers_version(), pipewire.get_library_version(), mainloop });
 
     var context = Context{
         .running = true,
